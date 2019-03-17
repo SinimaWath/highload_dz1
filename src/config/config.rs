@@ -11,6 +11,7 @@ pub const DOCUMENT_ROOT_INVALID_FORMAT: &str = "Invalid document root format";
 pub const THREAD_LIMIT_ERROR: &str = "Can't find thread_limit";
 pub const THREAD_LIMIT_INVALID_FORMAT: &str = "Invalid thread limit format";
 
+#[derive(Debug)]
 pub struct Config {
     pub thread_count: u16,
     pub dir_root: String,
@@ -37,8 +38,6 @@ impl Config {
             Some(pair) => pair.trim().split(" ").collect(),
             None => return Err(String::from(DOCUMENT_ROOT_ERROR)),
         };
-
-        println!("{:?}", document_root_pair);
 
         if (document_root_pair.len() != 2) {
             return Err(String::from(DOCUMENT_ROOT_INVALID_FORMAT));
