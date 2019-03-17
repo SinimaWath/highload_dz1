@@ -1,0 +1,2 @@
+document_root
+thread_limit 0
