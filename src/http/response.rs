@@ -14,7 +14,7 @@ const HTTP_TERMINATOR: &str = "\r\n";
 
 pub struct HTTPResponse {
     pub headers: HashMap<String, String>,
-    status: u16,
+    status: Option<String>,
     pub file: Option<File>,
 }
 
@@ -22,7 +22,7 @@ impl HTTPResponse {
     pub fn new() -> HTTPResponse{
         HTTPResponse{
             headers: HashMap::new(),
-            status: 0,
+            status: None,
             file: None,
         }
     }
@@ -30,7 +30,7 @@ impl HTTPResponse {
         let mut response = String::new();
         response.push_str(HTTP_VERSION);
         response.push_str(" ");
-        response.push_str(&self.status.to_string());
+        response.push_str(&self.status.unwrap()[..]);
         response.push_str(HTTP_TERMINATOR);
 
         for (header, value) in &self.headers {
@@ -41,8 +41,8 @@ impl HTTPResponse {
         response.push_str(HTTP_TERMINATOR);
 
         println!("{}", response);
-        stream.write(response.as_bytes()).unwrap();
 
+        stream.write(response.as_bytes()).unwrap();
         match self.file {
             Some(mut f) => {
                 let mut buf = [0; 1024 * 1024];
@@ -82,6 +82,7 @@ impl HTTPResponse {
             "jpeg" | "jpg" => String::from("image/jpeg"),
             "png" => String::from("image/png"),
             "swf" => String::from("application/x-shockwave-flash"),
+            "gif" => String::from("image/gif"),
             _ => String::from("application/chiki_briki"),
         }
     }
@@ -106,17 +107,22 @@ impl HTTPResponse {
             None => self.file = None,
         }
 
-        self.status = 200;
+        self.status = Some("200 OK".to_string());
     }
     
     pub fn setNotFound(&mut self) {
         self.file = None;
-        self.status = 404;
+        self.status = Some("404 Not Found".to_string());
+    }
+
+    pub fn setBadRequest(&mut self) {
+        self.file = None;
+        self.status = Some("400 Bad Request".to_string());
     }
 
     pub fn setNotAllowed(&mut self) {
         self.file = None;
-        self.status = 405;
+        self.status = Some("405 Forbidden".to_string());
     }
 
     pub fn setDate(&mut self) {

@@ -16,7 +16,7 @@ fn main() {
             .short("c")
             .long("config")
             .value_name("FILE")
-            .default_value("config.cfg")
+            .default_value("httpd.conf")
         )
         .arg(Arg::with_name("address")
             .short("addr")

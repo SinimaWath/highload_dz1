@@ -65,25 +65,29 @@ impl Server {
             } 
         }
 
-        println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
-
         let request = match HTTPRequest::parse(&mut buffer) {
             Ok(req) => req,
             Err(()) => {
-                println!("Error while parse!!");
+                let mut resp = Server::handle_bad_request();
+                resp.setDate();
+                resp.setServer("Rust (Unix)");
+                resp.setConnection("close");
+                resp.send(&stream);
                 return;
             }
         };
 
-        println!("Request Parsed: {:?}", request);
-
-        let resp = match Server::handle_request(request, root_dir) {
+        let mut resp = match Server::handle_request(request, root_dir) {
             Ok(resp) => resp,
             Err(()) => {
                 println!("Error handle request");
                 return;
             }
         }; 
+
+        resp.setDate();
+        resp.setServer("Rust (Unix)");
+        resp.setConnection("close");
 
         resp.send(&stream);
     }
@@ -92,22 +96,26 @@ impl Server {
         let path = req.path;
         let method = req.method;
 
-        let mut resp = match &method[..] {
+        let resp = match &method[..] {
             "GET" => Server::handle_get(path, root),
             "HEAD" => Server::handle_head(path, root),
             _ => Server::handle_other(),
         };
 
-        resp.setDate();
-        resp.setServer("Rust (Unix)");
-        resp.setConnection("close");
-        
         Ok(resp)
+    }
+
+    fn handle_bad_request() -> HTTPResponse {
+        println!("Handle bad");
+        let mut resp = HTTPResponse::new();
+
+        resp.setBadRequest();
+        return resp;
     }
 
     fn handle_get(path: String, root: String) -> HTTPResponse {
         let path = format!("{}{}", root, path);
-        
+        println!("{}", path);
         let mut resp = HTTPResponse::new();
 
         match File::open(&path) {
