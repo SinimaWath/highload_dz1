@@ -10,7 +10,7 @@ struct TestCase {
 fn get_method_parse() {
     let testCase = TestCase{
         raw_http: "GET /foo/bar/ HTTP/1.1".as_bytes(),
-        expected: request::HTTPRequest{method: String::from("GET"), path: String::from("")},
+        expected: request::HTTPRequest{method: String::from("GET"), path: String::from(""), isAutoIndex: true},
     };
 
     let result = match request::HTTPRequest::parse(testCase.raw_http) {
@@ -20,10 +20,36 @@ fn get_method_parse() {
 }
 
 #[test]
+fn test_auto_index_true() {
+    let testCase = TestCase{
+        raw_http: "GET /foo/bar/ HTTP/1.1".as_bytes(),
+        expected: request::HTTPRequest{method: String::from("GET"), path: String::from(""), isAutoIndex: true},
+    };
+
+    let result = match request::HTTPRequest::parse(testCase.raw_http) {
+        Ok(req) => assert_eq!(req.isAutoIndex, testCase.expected.isAutoIndex),
+        Err(()) => panic!("Unsxpected panic"),
+    };
+}
+
+#[test]
+fn test_auto_index_false() {
+    let testCase = TestCase{
+        raw_http: "GET /foo/bar/kek.html HTTP/1.1".as_bytes(),
+        expected: request::HTTPRequest{method: String::from("GET"), path: String::from(""), isAutoIndex: false},
+    };
+
+    let result = match request::HTTPRequest::parse(testCase.raw_http) {
+        Ok(req) => assert_eq!(req.isAutoIndex, testCase.expected.isAutoIndex),
+        Err(()) => panic!("Unsxpected panic"),
+    };
+}
+
+#[test]
 fn head_method_parse() {
     let testCase = TestCase{
         raw_http: "HEAD /foo/bar/ HTTP/1.1".as_bytes(),
-        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("")},
+        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from(""), isAutoIndex: true},
     };
 
     let result = match request::HTTPRequest::parse(testCase.raw_http) {
@@ -49,7 +75,7 @@ fn not_valid_method_parse() {
 fn valid_path_parse() {
     let testCase = TestCase{
         raw_http: "HEAD /foo/bar HTTP/1.1".as_bytes(),
-        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar")},
+        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar"), isAutoIndex: true},
     };
 
     let result = match request::HTTPRequest::parse(testCase.raw_http) {
@@ -62,7 +88,7 @@ fn valid_path_parse() {
 fn index_valid_path_parse() {
     let testCase = TestCase{
         raw_http: "HEAD /foo/bar/ HTTP/1.1".as_bytes(),
-        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/index.html")},
+        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/index.html"), isAutoIndex: true},
     };
 
     let result = match request::HTTPRequest::parse(testCase.raw_http) {
@@ -75,7 +101,7 @@ fn index_valid_path_parse() {
 fn with_query_valid_path_parse() {
     let testCase = TestCase{
         raw_http: "HEAD /foo/bar/kek.html?asdsa HTTP/1.1".as_bytes(),
-        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/kek.html")},
+        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/kek.html"), isAutoIndex: false},
     };
 
     let result = match request::HTTPRequest::parse(testCase.raw_http) {
@@ -89,7 +115,7 @@ fn with_query_valid_path_parse() {
 fn with_space_valid_path_parse() {
     let testCase = TestCase{
         raw_http: "HEAD /foo/bar/space%20in%20name.html HTTP/1.1".as_bytes(),
-        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/space in name.html")},
+        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/space in name.html"), isAutoIndex: false},
     };
 
     let result = match request::HTTPRequest::parse(testCase.raw_http) {
@@ -102,7 +128,7 @@ fn with_space_valid_path_parse() {
 fn with_space_query_valid_path_parse() {
     let testCase = TestCase{
         raw_http: "HEAD /foo/bar/space%20in%20name.html?l&=1 HTTP/1.1".as_bytes(),
-        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/space in name.html")},
+        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/space in name.html"), isAutoIndex: false},
     };
 
     let result = match request::HTTPRequest::parse(testCase.raw_http) {
@@ -116,7 +142,7 @@ fn with_space_query_valid_path_parse() {
 fn url_encode_valid_path_parse() {
     let testCase = TestCase{
         raw_http: "HEAD /foo/bar/%70%61%67%65%2e%68%74%6d%6c HTTP/1.1".as_bytes(),
-        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/page.html")},
+        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/page.html"), isAutoIndex: false},
     };
 
     let result = match request::HTTPRequest::parse(testCase.raw_http) {
@@ -129,7 +155,7 @@ fn url_encode_valid_path_parse() {
 fn url_encode_query_valid_path_parse() {
     let testCase = TestCase{
         raw_http: "HEAD /foo/bar/%70%61%67%65%2e%68%74%6d%6c?asd=1&asd HTTP/1.1".as_bytes(),
-        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/page.html")},
+        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/page.html"), isAutoIndex: false},
     };
 
     let result = match request::HTTPRequest::parse(testCase.raw_http) {
@@ -142,7 +168,7 @@ fn url_encode_query_valid_path_parse() {
 fn dot_escape_not_valid_path_parse() {
     let testCase = TestCase{
         raw_http: "HEAD /foo/bar/../../ HTTP/1.1".as_bytes(),
-        expected: request::HTTPRequest{method: String::from(""), path: String::from("")},
+        expected: request::HTTPRequest::new(),
     };
 
     let result = match request::HTTPRequest::parse(testCase.raw_http) {
@@ -155,7 +181,7 @@ fn dot_escape_not_valid_path_parse() {
 fn file_with_dot_valid_path_parse() {
     let testCase = TestCase{
         raw_http: "HEAD /foo/bar/index..html HTTP/1.1".as_bytes(),
-        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/index..html")},
+        expected: request::HTTPRequest{method: String::from("HEAD"), path: String::from("/foo/bar/index..html"), isAutoIndex: false},
     };
 
     let result = match request::HTTPRequest::parse(testCase.raw_http) {

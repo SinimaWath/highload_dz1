@@ -34,13 +34,10 @@ impl HTTPResponse {
         response.push_str(HTTP_TERMINATOR);
 
         for (header, value) in &self.headers {
-            println!("{}:{}", header, value);
             response.push_str(format!("{}: {}", header, value).as_str());
             response.push_str(HTTP_TERMINATOR);
         }
         response.push_str(HTTP_TERMINATOR);
-
-        println!("{}", response);
 
         stream.write(response.as_bytes()).unwrap();
         match self.file {
@@ -122,7 +119,12 @@ impl HTTPResponse {
 
     pub fn setNotAllowed(&mut self) {
         self.file = None;
-        self.status = Some("405 Forbidden".to_string());
+        self.status = Some("405 Not Allowed".to_string());
+    }
+
+    pub fn set403(&mut self) {
+        self.file = None;
+        self.status = Some("403 Forbidden".to_string());
     }
 
     pub fn setDate(&mut self) {

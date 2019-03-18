@@ -1,5 +1,4 @@
-extern crate threadpool;
-use threadpool::ThreadPool;
+use crate::thread_pool::thread_pool::ThreadPool;
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::io::prelude::*;
@@ -10,7 +9,7 @@ use std::fs::File;
 use std::path::Path;
 
 pub struct Server {
-    thread_pool: threadpool::ThreadPool,
+    thread_pool: ThreadPool,
     listener: TcpListener,
     dir_root: Arc<Mutex<String>>,
 }
@@ -38,7 +37,6 @@ impl Server {
 
         for stream in self.listener.incoming() {
             let stream = stream.unwrap();
-            println!("Connection established!");
 
             let root = self.dir_root.clone();
             self.thread_pool.execute(move|| {
@@ -48,12 +46,12 @@ impl Server {
 
                 std::mem::drop(root_dir_guard);
 
-                Server::handle_connection(stream, root_dir);
+                Server::handle_connection(stream, &root_dir);
             });
         }
     }
 
-    fn handle_connection(mut stream: TcpStream, root_dir: String) {
+    fn handle_connection(mut stream: TcpStream, root_dir: &String) {
         let mut buffer = [0; 512];
 
         match stream.read(&mut buffer) {
@@ -77,7 +75,7 @@ impl Server {
             }
         };
 
-        let mut resp = match Server::handle_request(request, root_dir) {
+        let mut resp = match Server::handle_request(request, &root_dir) {
             Ok(resp) => resp,
             Err(()) => {
                 println!("Error handle request");
@@ -92,13 +90,13 @@ impl Server {
         resp.send(&stream);
     }
 
-    fn handle_request(req: HTTPRequest, root: String) -> Result<HTTPResponse, ()> {
+    fn handle_request(req: HTTPRequest, root: &String) -> Result<HTTPResponse, ()> {
         let path = req.path;
         let method = req.method;
-
+        println!("{}{}",&root, &path);
         let resp = match &method[..] {
-            "GET" => Server::handle_get(path, root),
-            "HEAD" => Server::handle_head(path, root),
+            "GET" => Server::handle_get(path, &root, req.isAutoIndex),
+            "HEAD" => Server::handle_head(path, &root, req.isAutoIndex),
             _ => Server::handle_other(),
         };
 
@@ -113,9 +111,8 @@ impl Server {
         return resp;
     }
 
-    fn handle_get(path: String, root: String) -> HTTPResponse {
+    fn handle_get(path: String, root: &String, isAutoIndex: bool) -> HTTPResponse {
         let path = format!("{}{}", root, path);
-        println!("{}", path);
         let mut resp = HTTPResponse::new();
 
         match File::open(&path) {
@@ -126,18 +123,20 @@ impl Server {
                 resp.setOk(Some(file));
             },
             Err(err) => {
-                println!("Handle get error: {}", err);
-                resp.setNotFound();
+                if (isAutoIndex) {
+                    resp.set403()
+                } else {
+                    resp.setNotFound();
+                }
             }
         };
 
         return resp;
     }
 
-    fn handle_head(path: String, root: String) -> HTTPResponse {
+    fn handle_head(path: String, root: &String, isAutoIndex: bool) -> HTTPResponse {
         let path = format!("{}{}", root, path);
         
-        println!("{}", path);
         let mut resp = HTTPResponse::new();
 
         let p = Path::new(&path);
@@ -149,7 +148,11 @@ impl Server {
                 resp.setOk(None);
             },
             false => {
-                resp.setNotFound();
+                if (isAutoIndex) {
+                    resp.set403()
+                } else {
+                    resp.setNotFound();
+                }
             }
         };
 

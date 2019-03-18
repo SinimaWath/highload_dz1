@@ -5,6 +5,7 @@ use self::percent_encoding::percent_decode;
 pub struct HTTPRequest {
     pub method: String,    
     pub path: String,
+    pub isAutoIndex: bool,
 }
 
 impl HTTPRequest {
@@ -12,6 +13,7 @@ impl HTTPRequest {
         HTTPRequest {
             method: String::new(),
             path: String::new(),
+            isAutoIndex: false,
         }
     }
 
@@ -29,21 +31,25 @@ impl HTTPRequest {
             return Err(());
         }
 
+        let (parsedPath, isAutoIndex) = match parsePath(requestVec[1]) {
+            Ok((p, i)) => (p, i),
+            Err(()) => return Err(()),
+        };
+
         Ok(HTTPRequest{
             method: match requestVec[0] {
                 "GET" => String::from("GET"),
                 "HEAD" => String::from("HEAD"),
                 _ => return Err(()),
             },
-            path: match parsePath(requestVec[1]) {
-                Ok(p) => p,
-                Err(()) => return Err(()),
-            },
+            path: parsedPath,
+            isAutoIndex: isAutoIndex,
         })
     }
+
 }
 
-fn parsePath(path: &str) -> Result<String, ()> {
+fn parsePath(path: &str) -> Result<(String, bool), ()> {
     let rawPath = path.split("?").nth(0).unwrap(); 
     
     match rawPath.contains("/..") {
@@ -53,7 +59,8 @@ fn parsePath(path: &str) -> Result<String, ()> {
 
     let decoded = percent_decode(rawPath.as_bytes()).decode_utf8().unwrap();
     Ok(match decoded.split("/").last().unwrap() {
-        "" => format!("{}{}", decoded, "index.html"),
-        _ => String::from(decoded),
+        "" => (format!("{}{}", decoded, "index.html"), true)
+        ,
+        _ => (String::from(decoded), false),
     })
 }

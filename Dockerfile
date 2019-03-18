@@ -3,7 +3,7 @@ FROM rust:latest
 COPY httpd.conf /etc/httpd.conf
 COPY . .
 
-RUN cargo build
+RUN cargo build --release
 
 EXPOSE 80
 
