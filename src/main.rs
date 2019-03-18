@@ -4,6 +4,7 @@ use clap::App;
 use clap::Arg;
 use std::env;
 use dz1::config::config::Config;
+use dz1::server::server::Server;
 
 const DEFAULT_ADDRESS: &str = "127.0.0.1";
 const DEFAULT_PORT: &str = "9000";
@@ -15,7 +16,7 @@ fn main() {
             .short("c")
             .long("config")
             .value_name("FILE")
-            .required(true)
+            .default_value("config.cfg")
         )
         .arg(Arg::with_name("address")
             .short("addr")
@@ -29,7 +30,7 @@ fn main() {
         )
         .get_matches();
 
-    let config_name = matches.value_of("config").unwrap();
+    let config_name = matches.value_of("config").unwrap_or_default();
     let address = matches.value_of("address").unwrap_or_default().to_owned();
     let port = matches.value_of("port").unwrap_or_default().to_owned();
 
@@ -38,11 +39,6 @@ fn main() {
         Err(err) => panic!(err),
     };
 
-    println!("{:?}", config);
-    println!("Address: {} Port: {}", address, port);
+    let server = Server::new(config.dir_root, config.thread_count, address, port);
+    server.start();
 }
-
-// fn main() {
-//     let s = "/foo/bar/".as_bytes();
-//     s.as_bytes();
-// }
