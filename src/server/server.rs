@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 use std::io::prelude::*;
 use crate::http::request::HTTPRequest;
 use crate::http::response::HTTPResponse;
+use std::time::Duration;
 use std::collections::{HashMap};
 use std::fs::File;
 use std::path::Path;
@@ -37,7 +38,7 @@ impl Server {
 
         for stream in self.listener.incoming() {
             let stream = stream.unwrap();
-
+            stream.set_read_timeout(Some(Duration::from_secs(10))).unwrap();
             let root = self.dir_root.clone();
             self.thread_pool.execute(move|| {
                 let root_dir_guard = root.lock().unwrap();
